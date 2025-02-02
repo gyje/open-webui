@@ -1,4 +1,4 @@
-name: Deploy to HuggingFace Spaces
+name: 部署到抱抱脸空间
 
 on:
   push:
@@ -6,7 +6,8 @@ on:
       - dev
       - main
   workflow_dispatch:
-
+  schedule:
+    - cron: '0 20 * * *'  
 jobs:
   check-secret:
     runs-on: ubuntu-latest
@@ -25,16 +26,18 @@ jobs:
     if: needs.check-secret.outputs.token-set == 'true'
     env:
       HF_TOKEN: ${{ secrets.HF_TOKEN }}
+      HF_REPO: ${{ secrets.HF_REPO }}
+      HF_USER: ${{ secrets.HF_USER }}
     steps:
-      - name: Checkout repository
+      - name: 检出存储库
         uses: actions/checkout@v4
         with:
           lfs: true
 
-      - name: Remove git history
+      - name: 删除git历史记录
         run: rm -rf .git
 
-      - name: Prepend YAML front matter to README.md
+      - name: 将YAML添加到README.md中
         run: |
           echo "---" > temp_readme.md
           echo "title: Open WebUI" >> temp_readme.md
@@ -47,17 +50,16 @@ jobs:
           cat README.md >> temp_readme.md
           mv temp_readme.md README.md
 
-      - name: Configure git
+      - name: 配置git
         run: |
           git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git config --global user.name "github-actions[bot]"
-      - name: Set up Git and push to Space
+      - name: 设置Git并推送到抱抱脸空间
         run: |
           git init --initial-branch=main
           git lfs install
           git lfs track "*.ttf"
           git lfs track "*.jpg"
-          rm demo.gif
           git add .
           git commit -m "GitHub deploy: ${{ github.sha }}"
-          git push --force https://open-webui:${HF_TOKEN}@huggingface.co/spaces/open-webui/open-webui main
+          git push --force https://${HF_USER}:${HF_TOKEN}@huggingface.co/spaces/${HF_USER}/${HF_REPO} main
